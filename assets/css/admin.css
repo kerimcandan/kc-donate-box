@@ -1,0 +1,9 @@
+/* KC Donate Box – admin small cosmetics */
+#kc-links-repeater .kc-link-row,
+#kc-crypto-repeater .kc-crypto-row{
+  margin-bottom:8px;
+  padding:8px;
+  border:1px solid #ddd;
+  border-radius:6px;
+  background:#fff;
+}

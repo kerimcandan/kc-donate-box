@@ -1,0 +1,13 @@
+*.log
+*.zip
+*.tar.gz
+.DS_Store
+.idea/
+.vscode/
+node_modules/
+vendor/
+npm-debug.log*
+composer.lock
+package-lock.json
+.svn/
+assets/**/.DS_Store
