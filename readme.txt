@@ -1,12 +1,14 @@
 === KC Donate Box ===
 Contributors: kerimcandan
-Tags: donate, donation, support, crypto, bitcoin, ethereum, paypal
+Tags: donate, donation, support, crypto, paypal
 Requires at least: 6.0
-Tested up to: 6.8.3
+Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.6.0
+Stable tag: 1.6.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
+
+A lightweight donate/support box with custom links and multiple crypto wallets with QR.
 
 == Description ==
 KC Donate Box adds a lightweight donate/support panel after your posts:
@@ -37,6 +39,12 @@ You can paste emojis manually in the Message/Link labels.
 3. Crypto section with QR
 
 == Changelog ==
+= 1.6.1 =
+* Hardening: escape output everywhere; PHPCS/Plugin Check fixes.
+* Admin JS: safer template insertion (split/join).
+* Readme: short description + ≤5 tags; “Tested up to: 6.8”.
+* Removed deprecated textdomain loader call (WP.org handles it automatically).
+
 = 1.6.0 =
 * Added uninstall.php (cleans options on delete; multisite-safe).
 * Moved front CSS/JS to `assets/` files (no inline JS).
@@ -44,14 +52,14 @@ You can paste emojis manually in the Message/Link labels.
 
 = 1.5.0 =
 * Public release without emoji picker.
-* Simplified crypto fields (removed label/message), copy button, auto/uploaded QR.
+* Simplified crypto fields, copy button, auto/uploaded QR.
 
 = 1.4.1 =
 * Bugfix: PHP syntax in build_crypto_uri().
 
 = 1.4.0 =
-* (Internal) Emoji picker in settings, repeatable links/cryptos, export/import, reset.
+* (Internal) Emoji picker, repeatable links/cryptos, export/import, reset.
 
 == Upgrade Notice ==
-= 1.6.0 =
-Switch to file-based assets and clean uninstall. Please re-save settings once after update.
+= 1.6.1 =
+Security hardening and Plugin Check fixes. Please update.
