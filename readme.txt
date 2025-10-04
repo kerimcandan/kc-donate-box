@@ -39,6 +39,9 @@ You can paste emojis manually in the Message/Link labels.
 3. Crypto section with QR
 
 == Changelog ==
+= 1.6.2 =
+* Fix: escape rows attribute in textarea (Plugin Check).
+
 = 1.6.1 =
 * Hardening: escape output everywhere; PHPCS/Plugin Check fixes.
 * Admin JS: safer template insertion (split/join).

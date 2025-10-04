@@ -3,7 +3,7 @@
  * Plugin Name: KC Donate Box
  * Plugin URI:  https://github.com/kerimcandan/kc-donate-box
  * Description: Adds a customizable donate/support box under posts (repeatable links + multiple crypto wallets with QR). Shortcodes: [kc_donate_box], [kc_support_box]
- * Version:     1.6.1
+ * Version:     1.6.2
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Author:      Kerim Candan
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class KC_Donate_Box {
 	const OPT        = 'kc_donate_box_opts';
 	const LEGACY_OPT = 'kc_support_box_opts';
-	const VER        = '1.6.1';
+	const VER        = '1.6.2';
 
 	public static function init() {
 		add_action( 'admin_init',            array( __CLASS__, 'register_settings' ) );
@@ -183,27 +183,28 @@ class KC_Donate_Box {
 		}
 	}
 
-	public static function field_textarea( $args ) {
-		$key  = $args['key'];
-		$val  = self::get( $key );
-		$rows = ! empty( $args['rows'] ) ? (int) $args['rows'] : 3;
-		$ph   = ! empty( $args['placeholder'] ) ? $args['placeholder'] : '';
-		$id   = ! empty( $args['id'] ) ? $args['id'] : 'kc_ta_' . $key;
-		$name = sprintf( '%s[%s]', self::OPT, $key );
+public static function field_textarea( $args ) {
+	$key  = $args['key'];
+	$val  = self::get( $key );
+	$rows = ! empty( $args['rows'] ) ? (int) $args['rows'] : 3;
+	$ph   = ! empty( $args['placeholder'] ) ? $args['placeholder'] : '';
+	$id   = ! empty( $args['id'] ) ? $args['id'] : 'kc_ta_' . $key;
+	$name = sprintf( '%s[%s]', self::OPT, $key );
 
-		printf(
-			'<textarea id="%1$s" class="large-text" rows="%2$d" name="%3$s" placeholder="%4$s">%5$s</textarea>',
-			esc_attr( $id ),
-			$rows,
-			esc_attr( $name ),
-			esc_attr( $ph ),
-			esc_textarea( $val )
-		);
+	printf(
+		'<textarea id="%1$s" class="large-text" rows="%2$s" name="%3$s" placeholder="%4$s">%5$s</textarea>',
+		esc_attr( $id ),
+		esc_attr( (string) $rows ),   // <— here changed
+		esc_attr( $name ),
+		esc_attr( $ph ),
+		esc_textarea( $val )
+	);
 
-		if ( ! empty( $args['help'] ) ) {
-			printf( '<p class="description">%s</p>', esc_html( $args['help'] ) );
-		}
+	if ( ! empty( $args['help'] ) ) {
+		printf( '<p class="description">%s</p>', esc_html( $args['help'] ) );
 	}
+}
+
 
 	/* -------- Links repeater (admin) -------- */
 	public static function field_links_repeater() {
