@@ -3,7 +3,7 @@
  * Plugin Name: KC Donate Box
  * Plugin URI:  https://github.com/kerimcandan/kc-donate-box
  * Description: Adds a customizable donate/support box under posts (repeatable links + multiple crypto wallets with QR). Shortcodes: [kcdobo_donate_box] (new), [kc_donate_box] (legacy).
- * Version:     1.6.3
+ * Version:     1.6.3.1
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Author:      Kerim Candan
@@ -29,7 +29,7 @@ class KCDOBO_Plugin {
 	const OPT         = 'kcdobo_options';
 	const LEGACY_OPT1 = 'kc_donate_box_opts';
 	const LEGACY_OPT2 = 'kc_support_box_opts';
-	const VER         = '1.6.3';
+	const VER         = '1.6.3.1';
 
 	/** Bootstrap hooks */
 	public static function init() {
@@ -707,26 +707,48 @@ class KCDOBO_Plugin {
 		wp_enqueue_script( 'kcdobo-front', plugins_url( 'assets/js/front.js', __FILE__ ), array(), self::VER, true );
 	}
 
-	/* ---------------- Reset ---------------- */
-	public static function handle_reset() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( 'Insufficient permissions' );
-		}
-		// Try new nonce first; if absent, accept legacy nonce for compatibility.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( ! ( isset( $_REQUEST['_wpnonce'] ) && wp_verify_nonce( $_REQUEST['_wpnonce'], 'kcdobo_reset' ) ) ) {
-			check_admin_referer( 'kc_donate_box_reset' );
-		}
-
-		update_option( self::OPT, self::defaults(), false );
-
-		// Optional: clear legacy options as well.
-		delete_option( self::LEGACY_OPT1 );
-		delete_option( self::LEGACY_OPT2 );
-
-		wp_redirect( add_query_arg( array( 'page' => self::OPT, 'kc_reset' => 1 ), admin_url( 'options-general.php' ) ) );
-		exit;
+/* ---------------- Reset ---------------- */
+public static function handle_reset() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'Insufficient permissions' );
 	}
+
+	// Prefer the new nonce first (does not kill the request).
+	// If it's missing/invalid, fall back to the legacy nonce using check_admin_referer(),
+	// which will wp_die() if invalid.
+	$nonce_ok = false;
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	if ( isset( $_REQUEST['_wpnonce'] ) ) {
+		// Unslash superglobal before using it.
+		// Do NOT over-sanitize the nonce (avoid sanitize_text_field / sanitize_key).
+		$nonce = wp_unslash( $_REQUEST['_wpnonce'] );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		if ( wp_verify_nonce( $nonce, 'kcdobo_reset' ) ) {
+			$nonce_ok = true;
+		}
+	}
+
+	if ( ! $nonce_ok ) {
+		// Accept legacy nonce and die on failure (WP core handles reading & validation).
+		check_admin_referer( 'kc_donate_box_reset' );
+	}
+
+	update_option( self::OPT, self::defaults(), false );
+
+	// Optionally remove legacy options too.
+	delete_option( self::LEGACY_OPT1 );
+	delete_option( self::LEGACY_OPT2 );
+
+	wp_redirect(
+		add_query_arg(
+			array( 'page' => self::OPT, 'kc_reset' => 1 ),
+			admin_url( 'options-general.php' )
+		)
+	);
+	exit;
+}
+
 }
 
 KCDOBO_Plugin::init();
