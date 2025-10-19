@@ -720,10 +720,9 @@ public static function handle_reset() {
 
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	if ( isset( $_REQUEST['_wpnonce'] ) ) {
-		// Unslash superglobal before using it.
+		// Unsplash superglobal before using it.
 		// Do NOT over-sanitize the nonce (avoid sanitize_text_field / sanitize_key).
-		$nonce = wp_unslash( $_REQUEST['_wpnonce'] );
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$nonce = wp_unslash( $_REQUEST['_wpnonce'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		if ( wp_verify_nonce( $nonce, 'kcdobo_reset' ) ) {
 			$nonce_ok = true;
 		}
