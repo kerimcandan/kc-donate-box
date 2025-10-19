@@ -20,6 +20,22 @@ KC Donate Box adds a lightweight donate/support panel after your posts:
 - Reset to defaults, and JSON export/import
 - No tracking. No external calls unless you choose “Auto” QR (uses api.qrserver.com)
 
+== External services ==
+
+This plugin can optionally generate QR images via an external API when the “QR mode” is set to “Auto”.
+In that case, the plugin sends the wallet URI (e.g., “bitcoin:...”, “ethereum:...”) to the external service to get a QR image.
+
+Service: GOQR — QR code API (api.qrserver.com)
+- What it is used for: Generating QR images for the configured wallet URIs.
+- What data is sent: Only the wallet URI (as the `data` parameter) and the requested QR size. No personal data is sent by the plugin.
+- When data is sent: On front-end render (when the donate box is visible) or when previewing in the admin UI if “Auto” mode is enabled.
+- Terms of Service: https://goqr.me/legal/tos-api.html
+- Privacy Policy: https://goqr.me/privacy-safety-security/
+- API docs: https://goqr.me/api/doc/create-qr-code/
+
+If you prefer not to contact external services, set “QR mode” to “Upload” (use a locally uploaded QR image) or “None”.
+
+
 == Installation ==
 1. Upload the plugin folder to `/wp-content/plugins/` or upload the ZIP in **Plugins → Add New → Upload**.
 2. Activate the plugin through the ‘Plugins’ menu in WordPress.
@@ -39,6 +55,13 @@ You can paste emojis manually in the Message/Link labels.
 3. Crypto section with QR
 
 == Changelog ==
+= 1.6.3-rc1 =
+* Fix: Removed inline <script> output; all admin/front assets are properly enqueued via wp_enqueue_*.
+* Fix: Settings sanitization – when all rows are removed, save empty arrays instead of restoring defaults; when a section is not posted, keep previous values.
+* Docs: Added “External services” section (QR API: what/why/when/where + ToS/Privacy links). Clarified that “Auto” QR uses api.qrserver.com.
+* Dev: Prepared codebase for longer prefixes (future refactor).
+
+
 = 1.6.2 =
 * Fix: escape rows attribute in textarea (Plugin Check).
 

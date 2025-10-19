@@ -2,8 +2,8 @@
 /**
  * Plugin Name: KC Donate Box
  * Plugin URI:  https://github.com/kerimcandan/kc-donate-box
- * Description: Adds a customizable donate/support box under posts (repeatable links + multiple crypto wallets with QR). Shortcodes: [kc_donate_box], [kc_support_box]
- * Version:     1.6.2
+ * Description: Adds a customizable donate/support box under posts (repeatable links + multiple crypto wallets with QR). Shortcodes: [kcdobo_donate_box] (new), [kc_donate_box] (legacy).
+ * Version:     1.6.3-rc1
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Author:      Kerim Candan
@@ -17,11 +17,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class KC_Donate_Box {
-	const OPT        = 'kc_donate_box_opts';
-	const LEGACY_OPT = 'kc_support_box_opts';
-	const VER        = '1.6.2';
+class KCDOBO_Plugin {
 
+	/**
+	 * Options & version
+	 *
+	 * OPT         = new canonical option name (all new installs write here)
+	 * LEGACY_OPT1 = previous option name (auto-migrated on first save/load)
+	 * LEGACY_OPT2 = older legacy option name (auto-migrated if found)
+	 */
+	const OPT         = 'kcdobo_options';
+	const LEGACY_OPT1 = 'kc_donate_box_opts';
+	const LEGACY_OPT2 = 'kc_support_box_opts';
+	const VER         = '1.6.3';
+
+	/** Bootstrap hooks */
 	public static function init() {
 		add_action( 'admin_init',            array( __CLASS__, 'register_settings' ) );
 		add_action( 'admin_menu',            array( __CLASS__, 'admin_menu' ) );
@@ -29,11 +39,18 @@ class KC_Donate_Box {
 
 		add_filter( 'the_content',           array( __CLASS__, 'inject_box' ) );
 
-		add_shortcode( 'kc_donate_box',  array( __CLASS__, 'shortcode' ) );
-		add_shortcode( 'kc_support_box', array( __CLASS__, 'shortcode' ) ); // legacy alias
+		// New long-prefix shortcodes (recommended)
+		add_shortcode( 'kcdobo_donate_box',  array( __CLASS__, 'shortcode' ) );
+		add_shortcode( 'kcdobo_support_box', array( __CLASS__, 'shortcode' ) );
+
+		// Legacy shortcodes for backward-compatibility
+		add_shortcode( 'kc_donate_box',      array( __CLASS__, 'shortcode' ) );
+		add_shortcode( 'kc_support_box',     array( __CLASS__, 'shortcode' ) );
 
 		add_action( 'wp_enqueue_scripts',    array( __CLASS__, 'enqueue_front_assets' ) );
 
+		// Reset action: new + legacy alias (accept both)
+		add_action( 'admin_post_kcdobo_reset',        array( __CLASS__, 'handle_reset' ) );
 		add_action( 'admin_post_kc_donate_box_reset', array( __CLASS__, 'handle_reset' ) );
 	}
 
@@ -53,7 +70,7 @@ class KC_Donate_Box {
 					'enabled'       => 1,
 					'type'          => 'bitcoin',  // bitcoin|ethereum|litecoin|custom
 					'address'       => 'bc1qt7wc6jfth4t2szc2hp6340sqp3y0pa9r3ywgrr',
-					'custom_scheme' => 'bitcoin',  // when type=custom
+					'custom_scheme' => 'bitcoin',  // used only when type=custom
 					'qr_mode'       => 'upload',   // upload|auto|none
 					'qr_url'        => '',
 					'copy_button'   => 1,
@@ -63,17 +80,35 @@ class KC_Donate_Box {
 		);
 	}
 
+	/**
+	 * Load options with migration from legacy keys when needed.
+	 */
 	private static function load_options() {
+		// 1) Try the new canonical option first.
 		$opt = get_option( self::OPT, null );
+
+		// 2) If missing, try migrating from the newer legacy key.
 		if ( is_null( $opt ) ) {
-			$legacy = get_option( self::LEGACY_OPT, null );
-			if ( is_array( $legacy ) ) {
-				update_option( self::OPT, $legacy, false );
-				$opt = $legacy;
-			} else {
-				$opt = array();
+			$legacy_newer = get_option( self::LEGACY_OPT1, null ); // 'kc_donate_box_opts'
+			if ( is_array( $legacy_newer ) ) {
+				update_option( self::OPT, $legacy_newer, false );
+				$opt = $legacy_newer;
 			}
 		}
+
+		// 3) If still missing, try migrating from the older legacy key.
+		if ( is_null( $opt ) ) {
+			$legacy_old = get_option( self::LEGACY_OPT2, null ); // 'kc_support_box_opts'
+			if ( is_array( $legacy_old ) ) {
+				update_option( self::OPT, $legacy_old, false );
+				$opt = $legacy_old;
+			}
+		}
+
+		if ( is_null( $opt ) ) {
+			$opt = array();
+		}
+
 		return wp_parse_args( $opt, self::defaults() );
 	}
 
@@ -115,7 +150,7 @@ class KC_Donate_Box {
 			return;
 		}
 		$reset_url  = admin_url( 'admin-post.php' );
-		// Read-only notice flag set by our own safe redirect after nonce-checked reset action.
+		// Read-only notice flag set by our safe redirect after nonce-checked reset action.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$show_reset = (bool) filter_input( INPUT_GET, 'kc_reset', FILTER_VALIDATE_BOOLEAN );
 		?>
@@ -135,8 +170,8 @@ class KC_Donate_Box {
 			</form>
 
 			<form method="post" action="<?php echo esc_url( $reset_url ); ?>">
-				<?php wp_nonce_field( 'kc_donate_box_reset' ); ?>
-				<input type="hidden" name="action" value="kc_donate_box_reset" />
+				<?php wp_nonce_field( 'kcdobo_reset' ); ?>
+				<input type="hidden" name="action" value="kcdobo_reset" />
 				<?php submit_button( __( 'Reset to defaults', 'kc-donate-box' ), 'delete', 'submit', false, array( 'onclick' => "return confirm('Reset all KC Donate Box settings to factory defaults?');" ) ); ?>
 			</form>
 		</div>
@@ -183,28 +218,86 @@ class KC_Donate_Box {
 		}
 	}
 
-public static function field_textarea( $args ) {
-	$key  = $args['key'];
-	$val  = self::get( $key );
-	$rows = ! empty( $args['rows'] ) ? (int) $args['rows'] : 3;
-	$ph   = ! empty( $args['placeholder'] ) ? $args['placeholder'] : '';
-	$id   = ! empty( $args['id'] ) ? $args['id'] : 'kc_ta_' . $key;
-	$name = sprintf( '%s[%s]', self::OPT, $key );
+	public static function field_textarea( $args ) {
+		$key  = $args['key'];
+		$val  = self::get( $key );
+		$rows = ! empty( $args['rows'] ) ? (int) $args['rows'] : 3;
+		$ph   = ! empty( $args['placeholder'] ) ? $args['placeholder'] : '';
+		$id   = ! empty( $args['id'] ) ? $args['id'] : 'kc_ta_' . $key;
+		$name = sprintf( '%s[%s]', self::OPT, $key );
 
-	printf(
-		'<textarea id="%1$s" class="large-text" rows="%2$s" name="%3$s" placeholder="%4$s">%5$s</textarea>',
-		esc_attr( $id ),
-		esc_attr( (string) $rows ),   // <— here changed
-		esc_attr( $name ),
-		esc_attr( $ph ),
-		esc_textarea( $val )
-	);
+		printf(
+			'<textarea id="%1$s" class="large-text" rows="%2$s" name="%3$s" placeholder="%4$s">%5$s</textarea>',
+			esc_attr( $id ),
+			esc_attr( (string) $rows ),
+			esc_attr( $name ),
+			esc_attr( $ph ),
+			esc_textarea( $val )
+		);
 
-	if ( ! empty( $args['help'] ) ) {
-		printf( '<p class="description">%s</p>', esc_html( $args['help'] ) );
+		if ( ! empty( $args['help'] ) ) {
+			printf( '<p class="description">%s</p>', esc_html( $args['help'] ) );
+		}
 	}
-}
 
+	/* -------- Row templates for JS (no inline <script>) -------- */
+	private static function link_row_html( $i, $row ) {
+		$checked = ! empty( $row['enabled'] );
+		$label   = isset( $row['label'] ) ? $row['label'] : '';
+		$url     = isset( $row['url'] ) ? $row['url'] : '';
+
+		echo '<div class="kc-link-row">';
+
+		printf(
+			'<label style="display:inline-block;margin-right:8px;"><input type="checkbox" name="%1$s[links][%2$s][enabled]" value="1" %3$s> %4$s</label>',
+			esc_attr( self::OPT ),
+			esc_attr( (string) $i ),
+			checked( $checked, true, false ),
+			esc_html__( 'Enabled', 'kc-donate-box' )
+		);
+
+		printf(
+			'<input type="text" name="%1$s[links][%2$s][label]" value="%3$s" placeholder="%4$s" style="width:36%%;margin-right:6px;">',
+			esc_attr( self::OPT ),
+			esc_attr( (string) $i ),
+			esc_attr( $label ),
+			esc_attr__( 'Label (e.g., Buy me a coffee)', 'kc-donate-box' )
+		);
+
+		printf(
+			'<input type="url" name="%1$s[links][%2$s][url]" value="%3$s" placeholder="https://..." style="width:48%%;margin-right:6px;">',
+			esc_attr( self::OPT ),
+			esc_attr( (string) $i ),
+			esc_attr( $url )
+		);
+
+		echo '<button type="button" class="button kc-remove-link">' . esc_html__( 'Remove', 'kc-donate-box' ) . '</button>';
+		echo '</div>';
+	}
+
+	private static function link_row_template() {
+		$tmpl = array( 'enabled' => 1, 'label' => '', 'url' => '' );
+		ob_start();
+		self::link_row_html( '__INDEX__', $tmpl ); // __INDEX__ → replaced in JS
+		$html = ob_get_clean();
+		return str_replace( array( "\n", "\r" ), '', $html );
+	}
+
+	private static function crypto_row_template() {
+		$tmpl = array(
+			'enabled'       => 1,
+			'type'          => 'bitcoin',
+			'address'       => '',
+			'custom_scheme' => 'bitcoin',
+			'qr_mode'       => 'upload',
+			'qr_url'        => '',
+			'copy_button'   => 1,
+		);
+		ob_start();
+		self::crypto_row_html( '__INDEX__', $tmpl );
+		$html = ob_get_clean();
+		return str_replace( array( "\n", "\r" ), '', $html );
+	}
 
 	/* -------- Links repeater (admin) -------- */
 	public static function field_links_repeater() {
@@ -249,29 +342,9 @@ public static function field_textarea( $args ) {
 		}
 		echo '</div>';
 
+		// Hidden marker so sanitize() knows this section was present (even if empty).
+		echo '<input type="hidden" name="' . esc_attr( self::OPT ) . '[__links_present]" value="1">';
 		echo '<p><button type="button" class="button button-secondary" id="kc-add-link">+ ' . esc_html__( 'Add link', 'kc-donate-box' ) . '</button></p>';
-		?>
-		<script>
-		(function($){
-			var $rep = $('#kc-links-repeater');
-			$('#kc-add-link').on('click', function(){
-				var i = $rep.children('.kc-link-row').length;
-				var html =
-				  '<div class="kc-link-row">' +
-				  '<label style="display:inline-block;margin-right:8px;">' +
-				  '<input type="checkbox" name="<?php echo esc_js( self::OPT ); ?>[links]['+i+'][enabled]" value="1" checked> <?php echo esc_js( __( 'Enabled', 'kc-donate-box' ) ); ?></label>' +
-				  '<input type="text" name="<?php echo esc_js( self::OPT ); ?>[links]['+i+'][label]" value="" placeholder="<?php echo esc_js( __( 'Label', 'kc-donate-box' ) ); ?>" style="width:36%;margin-right:6px;">' +
-				  '<input type="url"  name="<?php echo esc_js( self::OPT ); ?>[links]['+i+'][url]"   value="" placeholder="https://..." style="width:48%;margin-right:6px;">' +
-				  '<button type="button" class="button kc-remove-link"><?php echo esc_js( __( 'Remove', 'kc-donate-box' ) ); ?></button>' +
-				  '</div>';
-				$rep.append($(html));
-			});
-			$rep.on('click','.kc-remove-link', function(){
-				$(this).closest('.kc-link-row').remove();
-			});
-		})(jQuery);
-		</script>
-		<?php
 	}
 
 	/* -------- Crypto repeater (admin) -------- */
@@ -286,54 +359,10 @@ public static function field_textarea( $args ) {
 			self::crypto_row_html( $i, $row );
 		}
 		echo '</div>';
+
+		// Hidden marker so sanitize() knows this section was present (even if empty).
+		echo '<input type="hidden" name="' . esc_attr( self::OPT ) . '[__cryptos_present]" value="1">';
 		echo '<p><button type="button" class="button button-secondary" id="kc-add-crypto">+ ' . esc_html__( 'Add crypto', 'kc-donate-box' ) . '</button></p>';
-
-		$tmpl           = array(
-			'enabled'       => 1,
-			'type'          => 'bitcoin',
-			'address'       => '',
-			'custom_scheme' => 'bitcoin',
-			'qr_mode'       => 'upload',
-			'qr_url'        => '',
-			'copy_button'   => 1,
-		);
-		$template_index = '__INDEX__';
-
-		ob_start();
-		self::crypto_row_html( $template_index, $tmpl );
-		$row_template = ob_get_clean();
-		$row_template = str_replace( array( "\n", "\r" ), '', $row_template );
-		?>
-		<script>
-		(function($){
-			var $rep = $('#kc-crypto-repeater');
-			var rowTmpl = <?php echo wp_json_encode( $row_template ); ?>;
-
-			$('#kc-add-crypto').on('click', function(){
-				var i = $rep.children('.kc-crypto-row').length;
-				// Regex yerine basit split/join — güvenli ve WPCS dostu
-				var html = rowTmpl.split('__INDEX__').join(String(i));
-				$rep.append($(html));
-			});
-
-			$rep.on('click','.kc-remove-crypto', function(){
-				$(this).closest('.kc-crypto-row').remove();
-			});
-
-			// Media picker (delegated)
-			$(document).on('click','.kc-media-btn', function(e){
-				e.preventDefault();
-				var target = $('#'+$(this).data('target'));
-				var frame = wp.media({ title:'Choose image', multiple:false, library:{type:'image'} });
-				frame.on('select', function(){
-					var att = frame.state().get('selection').first().toJSON();
-					target.val(att.url);
-				});
-				frame.open();
-			});
-		})(jQuery);
-		</script>
-		<?php
 	}
 
 	private static function crypto_row_html( $i, $row ) {
@@ -442,24 +471,41 @@ public static function field_textarea( $args ) {
 
 	/* -------- Admin assets (enqueue file-based) -------- */
 	public static function admin_assets( $hook ) {
-		if ( $hook !== 'settings_page_' . self::OPT ) {
+		// Only on our settings page
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : '';
+		if ( $page !== self::OPT ) {
 			return;
 		}
+
 		wp_enqueue_media();
 		wp_enqueue_script( 'jquery' );
-		wp_enqueue_style( 'kc-donate-admin', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), self::VER );
-		wp_enqueue_script( 'kc-donate-admin', plugins_url( 'assets/js/admin.js', __FILE__ ), array( 'jquery' ), self::VER, true );
+
+		wp_enqueue_style( 'kcdobo-admin', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), self::VER );
+		wp_enqueue_script( 'kcdobo-admin', plugins_url( 'assets/js/admin.js', __FILE__ ), array( 'jquery' ), self::VER, true );
+
+		// Pass small HTML templates/config to JS without inline <script> tags elsewhere.
+		$config = array(
+			'link_row_tmpl'   => self::link_row_template(),
+			'crypto_row_tmpl' => self::crypto_row_template(),
+		);
+		wp_add_inline_script(
+			'kcdobo-admin',
+			'window.kcdonatebox_admin = ' . wp_json_encode( $config ) . ';',
+			'before'
+		);
 	}
 
 	/* ---------------- Sanitize ---------------- */
 	public static function sanitize( $input ) {
-		$d = self::defaults();
+		$d    = self::defaults();
+		$prev = get_option( self::OPT, $d ); // previous saved options (or defaults if none)
 
 		// Import first
 		if ( ! empty( $input['__import_json'] ) ) {
 			$json = json_decode( stripslashes( $input['__import_json'] ), true );
 			if ( is_array( $json ) ) {
-				$merged                 = wp_parse_args( $json, $d );
+				$merged                  = wp_parse_args( $json, $d );
 				$merged['__import_json'] = '';
 				return $merged;
 			}
@@ -468,68 +514,78 @@ public static function field_textarea( $args ) {
 		$out                 = array();
 		$out['enabled']      = ! empty( $input['enabled'] ) ? 1 : 0;
 		$out['on_singular']  = ! empty( $input['on_singular'] ) ? 1 : 0;
-		$out['title']        = isset( $input['title'] ) ? sanitize_text_field( $input['title'] ) : $d['title'];
-		$out['message']      = isset( $input['message'] ) ? wp_kses_post( $input['message'] ) : $d['message'];
+		$out['title']        = isset( $input['title'] )   ? sanitize_text_field( $input['title'] )   : ( isset( $prev['title'] ) ? $prev['title'] : $d['title'] );
+		$out['message']      = isset( $input['message'] ) ? wp_kses_post( $input['message'] )        : ( isset( $prev['message'] ) ? $prev['message'] : $d['message'] );
 
-		// Links
+		/* Links
+		 * If the form posts the links section: parse it (empty array allowed).
+		 * If not posted at all: keep previous (or defaults).
+		 */
 		$out['links'] = array();
-		if ( ! empty( $input['links'] ) && is_array( $input['links'] ) ) {
-			foreach ( $input['links'] as $row ) {
-				$lbl = isset( $row['label'] ) ? wp_kses_post( $row['label'] ) : '';
-				$url = isset( $row['url'] ) ? esc_url_raw( $row['url'] ) : '';
-				$en  = ! empty( $row['enabled'] ) ? 1 : 0;
-				if ( $lbl === '' && $url === '' ) {
-					continue;
+		if ( array_key_exists( 'links', $input ) || ! empty( $input['__links_present'] ) ) {
+			if ( ! empty( $input['links'] ) && is_array( $input['links'] ) ) {
+				foreach ( $input['links'] as $row ) {
+					$lbl = isset( $row['label'] ) ? wp_kses_post( $row['label'] ) : '';
+					$url = isset( $row['url'] )   ? esc_url_raw( $row['url'] )   : '';
+					$en  = ! empty( $row['enabled'] ) ? 1 : 0;
+					if ( $lbl === '' && $url === '' ) {
+						continue;
+					}
+					$out['links'][] = array(
+						'label'   => $lbl,
+						'url'     => $url,
+						'enabled' => $en,
+					);
 				}
-				$out['links'][] = array(
-					'label'   => $lbl,
-					'url'     => $url,
-					'enabled' => $en,
-				);
 			}
-		}
-		if ( empty( $out['links'] ) ) {
-			$out['links'] = $d['links'];
+			// If nothing valid remains, keep it as empty [] intentionally.
+		} else {
+			$out['links'] = isset( $prev['links'] ) ? $prev['links'] : $d['links'];
 		}
 
-		// Cryptos
+		/* Cryptos
+		 * If the form posts the cryptos section: parse it (empty array allowed).
+		 * If not posted at all: keep previous (or defaults).
+		 */
 		$out['cryptos'] = array();
-		if ( ! empty( $input['cryptos'] ) && is_array( $input['cryptos'] ) ) {
-			foreach ( $input['cryptos'] as $row ) {
-				$en   = ! empty( $row['enabled'] ) ? 1 : 0;
-				$type = isset( $row['type'] ) ? sanitize_text_field( $row['type'] ) : 'bitcoin';
-				if ( ! in_array( $type, array( 'bitcoin', 'ethereum', 'litecoin', 'custom' ), true ) ) {
-					$type = 'bitcoin';
+		if ( array_key_exists( 'cryptos', $input ) || ! empty( $input['__cryptos_present'] ) ) {
+			if ( ! empty( $input['cryptos'] ) && is_array( $input['cryptos'] ) ) {
+				foreach ( $input['cryptos'] as $row ) {
+					$en   = ! empty( $row['enabled'] ) ? 1 : 0;
+					$type = isset( $row['type'] ) ? sanitize_text_field( $row['type'] ) : 'bitcoin';
+					if ( ! in_array( $type, array( 'bitcoin', 'ethereum', 'litecoin', 'custom' ), true ) ) {
+						$type = 'bitcoin';
+					}
+
+					$addr   = isset( $row['address'] )       ? sanitize_text_field( $row['address'] )       : '';
+					$scheme = isset( $row['custom_scheme'] ) ? sanitize_text_field( $row['custom_scheme'] ) : 'bitcoin';
+
+					$qrmode = isset( $row['qr_mode'] ) ? sanitize_text_field( $row['qr_mode'] ) : 'upload';
+					if ( ! in_array( $qrmode, array( 'upload', 'auto', 'none' ), true ) ) {
+						$qrmode = 'upload';
+					}
+					$qrurl = isset( $row['qr_url'] ) ? esc_url_raw( $row['qr_url'] ) : '';
+
+					$copy = ! empty( $row['copy_button'] ) ? 1 : 0;
+
+					// Skip fully empty + disabled rows
+					if ( ! $en && $addr === '' && $qrurl === '' ) {
+						continue;
+					}
+
+					$out['cryptos'][] = array(
+						'enabled'       => $en,
+						'type'          => $type,
+						'address'       => $addr,
+						'custom_scheme' => $scheme,
+						'qr_mode'       => $qrmode,
+						'qr_url'        => $qrurl,
+						'copy_button'   => $copy,
+					);
 				}
-
-				$addr   = isset( $row['address'] ) ? sanitize_text_field( $row['address'] ) : '';
-				$scheme = isset( $row['custom_scheme'] ) ? sanitize_text_field( $row['custom_scheme'] ) : 'bitcoin';
-
-				$qrmode = isset( $row['qr_mode'] ) ? sanitize_text_field( $row['qr_mode'] ) : 'upload';
-				if ( ! in_array( $qrmode, array( 'upload', 'auto', 'none' ), true ) ) {
-					$qrmode = 'upload';
-				}
-				$qrurl = isset( $row['qr_url'] ) ? esc_url_raw( $row['qr_url'] ) : '';
-
-				$copy = ! empty( $row['copy_button'] ) ? 1 : 0;
-
-				if ( ! $en && $addr === '' && $qrurl === '' ) {
-					continue;
-				}
-
-				$out['cryptos'][] = array(
-					'enabled'       => $en,
-					'type'          => $type,
-					'address'       => $addr,
-					'custom_scheme' => $scheme,
-					'qr_mode'       => $qrmode,
-					'qr_url'        => $qrurl,
-					'copy_button'   => $copy,
-				);
 			}
-		}
-		if ( empty( $out['cryptos'] ) ) {
-			$out['cryptos'] = $d['cryptos'];
+		} else {
+			$out['cryptos'] = isset( $prev['cryptos'] ) ? $prev['cryptos'] : $d['cryptos'];
 		}
 
 		$out['__import_json'] = '';
@@ -647,8 +703,8 @@ public static function field_textarea( $args ) {
 			return;
 		}
 
-		wp_enqueue_style( 'kc-donate-front', plugins_url( 'assets/css/front.css', __FILE__ ), array(), self::VER );
-		wp_enqueue_script( 'kc-donate-front', plugins_url( 'assets/js/front.js', __FILE__ ), array(), self::VER, true );
+		wp_enqueue_style( 'kcdobo-front', plugins_url( 'assets/css/front.css', __FILE__ ), array(), self::VER );
+		wp_enqueue_script( 'kcdobo-front', plugins_url( 'assets/js/front.js', __FILE__ ), array(), self::VER, true );
 	}
 
 	/* ---------------- Reset ---------------- */
@@ -656,12 +712,21 @@ public static function field_textarea( $args ) {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( 'Insufficient permissions' );
 		}
-		check_admin_referer( 'kc_donate_box_reset' );
+		// Try new nonce first; if absent, accept legacy nonce for compatibility.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! ( isset( $_REQUEST['_wpnonce'] ) && wp_verify_nonce( $_REQUEST['_wpnonce'], 'kcdobo_reset' ) ) ) {
+			check_admin_referer( 'kc_donate_box_reset' );
+		}
+
 		update_option( self::OPT, self::defaults(), false );
-		delete_option( self::LEGACY_OPT );
+
+		// Optional: clear legacy options as well.
+		delete_option( self::LEGACY_OPT1 );
+		delete_option( self::LEGACY_OPT2 );
+
 		wp_redirect( add_query_arg( array( 'page' => self::OPT, 'kc_reset' => 1 ), admin_url( 'options-general.php' ) ) );
 		exit;
 	}
 }
 
-KC_Donate_Box::init();
+KCDOBO_Plugin::init();
