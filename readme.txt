@@ -60,6 +60,7 @@ Use [kcdobo_donate_box] (recommended) or [kcdobo_support_box]. Legacy shortcodes
 
 == Changelog ==
 = 1.6.3 =
+* Security/Hardening: Nonce validation path updated — unslash before verification; legacy nonce kept for backward compatibility.
 * Fix: Removed inline <script> output; all admin/front assets are enqueued via wp_enqueue_*.
 * Fix: Settings sanitization — removing all rows now saves empty arrays instead of restoring defaults; when a section is not posted, previous values are kept.
 * Docs: Added “External Services” section (QR API: what/why/when/where + ToS/Privacy links). Clarified that “Auto” QR uses api.qrserver.com.

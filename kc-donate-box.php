@@ -3,7 +3,7 @@
  * Plugin Name: KC Donate Box
  * Plugin URI:  https://github.com/kerimcandan/kc-donate-box
  * Description: Adds a customizable donate/support box under posts (repeatable links + multiple crypto wallets with QR). Shortcodes: [kcdobo_donate_box] (new), [kc_donate_box] (legacy).
- * Version:     1.6.3.1
+ * Version:     1.6.3
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Author:      Kerim Candan
@@ -29,7 +29,7 @@ class KCDOBO_Plugin {
 	const OPT         = 'kcdobo_options';
 	const LEGACY_OPT1 = 'kc_donate_box_opts';
 	const LEGACY_OPT2 = 'kc_support_box_opts';
-	const VER         = '1.6.3.1';
+	const VER         = '1.6.3';
 
 	/** Bootstrap hooks */
 	public static function init() {
