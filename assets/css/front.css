@@ -1,5 +1,6 @@
-/* KC Donate Box – front styles */
-.kc-support-box{
+/* Legacy and new version */
+.kc-support-box,
+.kcdobo-support-box {
   background:#f9f9f9;
   border-left:4px solid #0070ba;
   padding:15px 20px;
@@ -9,5 +10,7 @@
   font-family:system-ui,sans-serif;
   font-size:.95em; line-height:1.6;
 }
-.kc-support-box a{ color:#0070ba; font-weight:700; text-decoration:none; }
-.kc-support-box a:hover{ text-decoration:underline; }
+.kc-support-box a,
+.kcdobo-support-box a { color:#0070ba; font-weight:700; text-decoration:none; }
+.kc-support-box a:hover,
+.kcdobo-support-box a:hover { text-decoration:underline; }

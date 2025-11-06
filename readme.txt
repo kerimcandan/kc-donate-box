@@ -5,53 +5,52 @@ Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
 Tested up to PHP: 8.4
-Stable tag: 1.6.3
+Stable tag: 1.6.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
-
 
 A lightweight donate/support box with custom links and multiple crypto wallets with QR.
 
 == Description ==
 KC Donate Box adds a lightweight donate/support panel after your posts:
+
 - Custom title & message
 - Repeatable custom links (e.g., Buy me a coffee, PayPal)
 - Multiple crypto wallets with QR (uploaded image or auto-generated)
 - Copy-to-clipboard button
-- Shortcodes: [kcdobo_donate_box] (new), [kcdobo_support_box] (alias), and legacy [kc_donate_box], [kc_support_box]
+- Shortcode: [kcdobo_donate_box]
 - Reset to defaults, and JSON export/import
-- No tracking. No external calls unless you choose ‚ÄúAuto‚Äù QR (uses api.qrserver.com)
+- No tracking. No external calls unless you choose ìAutoî QR (uses api.qrserver.com)
 
 == External Services ==
+This plugin can optionally generate QR images via an external API when the ìQR modeî is set to ìAutoî.
+In that case, the plugin sends the wallet URI (e.g., ìbitcoin:Öî, ìethereum:Öî) to the external service to get a QR image.
 
-This plugin can optionally generate QR images via an external API when the ‚ÄúQR mode‚Äù is set to ‚ÄúAuto‚Äù.
-In that case, the plugin sends the wallet URI (e.g., ‚Äúbitcoin:...‚Äù, ‚Äúethereum:...‚Äù) to the external service to get a QR image.
-
-Service: GOQR ‚Äî QR code API (api.qrserver.com)
-- What it is used for: Generating QR images for the configured wallet URIs.
-- What data is sent: Only the wallet URI (as the `data` parameter) and the requested QR size. No personal data is sent by the plugin.
-- When data is sent: On front-end render (when the donate box is visible) and only for entries where QR Mode = ‚ÄúAuto‚Äù.
-- Terms of Service: https://goqr.me/legal/tos-api.html
-- Privacy Policy: https://goqr.me/privacy-safety-security/
+Service: GOQR ó QR code API (api.qrserver.com)  
+- Purpose: Generating QR images for the configured wallet URIs.  
+- Data sent: Only the wallet URI (as the `data` parameter) and the requested QR size. No personal data is sent by the plugin.  
+- When: On front-end render (when the donate box is visible) and only for entries where QR Mode = ìAutoî.  
+- Terms of Service: https://goqr.me/legal/tos-api.html  
+- Privacy Policy: https://goqr.me/privacy-safety-security/  
 - API docs: https://goqr.me/api/doc/create-qr-code/
 
-If you prefer not to contact external services, set ‚ÄúQR mode‚Äù to ‚ÄúUpload‚Äù (use a locally uploaded QR image) or ‚ÄúNone‚Äù.
+If you prefer not to contact external services, set ìQR modeî to ìUploadî (use a locally uploaded QR image) or ìNoneî.
 
 == Installation ==
-1. Upload the plugin folder to `/wp-content/plugins/` or upload the ZIP in **Plugins ‚Üí Add New ‚Üí Upload**.
-2. Activate the plugin through the ‚ÄòPlugins‚Äô menu in WordPress.
-3. Go to **Settings ‚Üí KC Donate Box** and configure.
+1. Upload the plugin folder to `/wp-content/plugins/` or upload the ZIP in **Plugins ? Add New ? Upload**.
+2. Activate the plugin through the ìPluginsî menu in WordPress.
+3. Go to **Settings ? KC Donate Box** and configure.
 
 == Frequently Asked Questions ==
 
 = Can I show it on every post type? =
-By default it shows on single posts. Uncheck ‚ÄúShow only on single posts‚Äù to render it everywhere.
+By default it shows on single posts. Uncheck ìShow only on single postsî to render it everywhere.
 
 = Does it support emojis? =
 You can paste emojis manually in the Message/Link labels.
 
-= What shortcodes are supported? =
-Use [kcdobo_donate_box] (recommended) or [kcdobo_support_box]. Legacy shortcodes [kc_donate_box] and [kc_support_box] still work for backward compatibility.
+= What shortcode is supported? =
+Use `[kcdobo_donate_box]`.
 
 == Screenshots ==
 1. Settings screen
@@ -59,12 +58,20 @@ Use [kcdobo_donate_box] (recommended) or [kcdobo_support_box]. Legacy shortcodes
 3. Crypto section with QR
 
 == Changelog ==
+= 1.6.4 =
+* Prefix/Namespacing: Consolidated all shortcodes, option names, and admin/front CSS/JS selectors to the longer `kcdobo` scheme; removed remaining `kc_` traces.
+* Asset Enqueue: Admin/front assets are loaded only via `wp_enqueue_*`. Inline `<script>` was removed; admin JS config is injected with `wp_add_inline_script( ..., 'before' )`.
+* Security: Nonce validation now applies `sanitize_text_field( wp_unslash( ... ) )` before `wp_verify_nonce()`. Invalid requests fail safely.
+* Admin UI: Repeater buttons and row selectors (add/remove) use the new prefix and delegated jQuery handlers.
+* Uninstall: Cleans options on single-site and per-site on multisite.
+* Docs: ìExternal Servicesî section clarifies that only the optional ìAutoî QR mode calls api.qrserver.com.
+
 = 1.6.3 =
-* Security/Hardening: Nonce validation path updated ‚Äî unslash before verification; legacy nonce kept for backward compatibility.
+* Security/Hardening: Nonce validation path updated ó unslash + sanitize before verification.
 * Fix: Removed inline <script> output; all admin/front assets are enqueued via wp_enqueue_*.
-* Fix: Settings sanitization ‚Äî removing all rows now saves empty arrays instead of restoring defaults; when a section is not posted, previous values are kept.
-* Docs: Added ‚ÄúExternal Services‚Äù section (QR API: what/why/when/where + ToS/Privacy links). Clarified that ‚ÄúAuto‚Äù QR uses api.qrserver.com.
-* Dev: Introduced longer internal prefix (kcdobo_) in preparation for a broader namespace refactor; legacy shortcodes and options are migrated/aliased for backward compatibility.
+* Fix: Settings sanitization ó removing all rows now saves empty arrays instead of restoring defaults; when a section is not posted, previous values are kept.
+* Docs: Added ìExternal Servicesî section (QR API: what/why/when/where + ToS/Privacy links). Clarified that ìAutoî QR uses api.qrserver.com.
+* Dev: Switched to a longer internal prefix (kcdobo_). Removed legacy shortcodes and aliases.
 
 = 1.6.2 =
 * Fix: escape rows attribute in textarea (Plugin Check).
@@ -72,8 +79,7 @@ Use [kcdobo_donate_box] (recommended) or [kcdobo_support_box]. Legacy shortcodes
 = 1.6.1 =
 * Hardening: escape output everywhere; PHPCS/Plugin Check fixes.
 * Admin JS: safer template insertion (split/join).
-* Readme: short description + ‚â§5 tags; ‚ÄúTested up to: 6.8‚Äù.
-* Removed deprecated textdomain loader call (WP.org handles it automatically).
+* Readme: short description + =5 tags; ìTested up to: 6.8î.
 
 = 1.6.0 =
 * Added uninstall.php (cleans options on delete; multisite-safe).
@@ -91,5 +97,5 @@ Use [kcdobo_donate_box] (recommended) or [kcdobo_support_box]. Legacy shortcodes
 * (Internal) Emoji picker, repeatable links/cryptos, export/import, reset.
 
 == Upgrade Notice ==
-= 1.6.1 =
-Security hardening and Plugin Check fixes. Please update.
+= 1.6.4 =
+Security hardening, strict prefixing, and enqueue fixes per review. Please update.

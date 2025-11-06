@@ -1,13 +1,6 @@
-*.log
-*.zip
-*.tar.gz
+kc-donate-box-*.zip
 .DS_Store
+Thumbs.db
 .idea/
 .vscode/
-node_modules/
-vendor/
-npm-debug.log*
-composer.lock
-package-lock.json
-.svn/
-assets/**/.DS_Store
+*.log

@@ -2,8 +2,8 @@
 /**
  * Plugin Name: KC Donate Box
  * Plugin URI:  https://github.com/kerimcandan/kc-donate-box
- * Description: Adds a customizable donate/support box under posts (repeatable links + multiple crypto wallets with QR). Shortcodes: [kcdobo_donate_box] (new), [kc_donate_box] (legacy).
- * Version:     1.6.3
+ * Description: Adds a customizable donate/support box under posts (repeatable links + multiple crypto wallets with QR). Shortcode: [kcdobo_donate_box].
+ * Version:     1.6.4
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Author:      Kerim Candan
@@ -20,16 +20,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 class KCDOBO_Plugin {
 
 	/**
-	 * Options & version
-	 *
-	 * OPT         = new canonical option name (all new installs write here)
-	 * LEGACY_OPT1 = previous option name (auto-migrated on first save/load)
-	 * LEGACY_OPT2 = older legacy option name (auto-migrated if found)
+	 * Canonical option + version.
 	 */
-	const OPT         = 'kcdobo_options';
-	const LEGACY_OPT1 = 'kc_donate_box_opts';
-	const LEGACY_OPT2 = 'kc_support_box_opts';
-	const VER         = '1.6.3';
+	const OPT = 'kcdobo_options';
+	const VER = '1.6.4';
 
 	/** Bootstrap hooks */
 	public static function init() {
@@ -39,76 +33,47 @@ class KCDOBO_Plugin {
 
 		add_filter( 'the_content',           array( __CLASS__, 'inject_box' ) );
 
-		// New long-prefix shortcodes (recommended)
+		// Only new long-prefix shortcodes (legacy removed).
 		add_shortcode( 'kcdobo_donate_box',  array( __CLASS__, 'shortcode' ) );
-		add_shortcode( 'kcdobo_support_box', array( __CLASS__, 'shortcode' ) );
-
-		// Legacy shortcodes for backward-compatibility
-		add_shortcode( 'kc_donate_box',      array( __CLASS__, 'shortcode' ) );
-		add_shortcode( 'kc_support_box',     array( __CLASS__, 'shortcode' ) );
 
 		add_action( 'wp_enqueue_scripts',    array( __CLASS__, 'enqueue_front_assets' ) );
 
-		// Reset action: new + legacy alias (accept both)
-		add_action( 'admin_post_kcdobo_reset',        array( __CLASS__, 'handle_reset' ) );
-		add_action( 'admin_post_kc_donate_box_reset', array( __CLASS__, 'handle_reset' ) );
+		// Reset action (legacy alias removed).
+		add_action( 'admin_post_kcdobo_reset', array( __CLASS__, 'handle_reset' ) );
 	}
 
-	/* ---------------- Defaults ---------------- */
-	public static function defaults() {
-		return array(
-			'enabled'     => 1,
-			'on_singular' => 1,
-			'title'       => 'Heads up',
-			'message'     => 'If you enjoyed this post or found it helpful, you can support my work 😊',
-			'links'       => array(
-				array( 'label' => '☕ Buy me a coffee',    'url' => 'https://buymeacoffee.com/kerimcandan', 'enabled' => 1 ),
-				array( 'label' => '💙 Support via PayPal', 'url' => 'https://www.paypal.me/kerimcandan',   'enabled' => 1 ),
+/* ---------------- Defaults ---------------- */
+public static function defaults() {
+	return array(
+		'enabled'     => 1,
+		'on_singular' => 1,
+		'title'       => 'Heads up',
+		'message'     => 'If you enjoyed this post or found it helpful, you can support my work 😊',
+		'links'       => array(
+			array( 'label' => '☕ Buy me a coffee',  'url' => 'https://buymeacoffee.com/kerimcandan', 'enabled' => 1 ),
+			array( 'label' => '💙 Support via PayPal', 'url' => 'https://www.paypal.me/kerimcandan',   'enabled' => 1 ),
+		),
+		'cryptos'     => array(
+			array(
+				'enabled'       => 1,
+				'type'          => 'bitcoin',  // bitcoin|ethereum|litecoin|custom
+				'address'       => 'bc1qt7wc6jfth4t2szc2hp6340sqp3y0pa9r3ywgrr',
+				'custom_scheme' => 'bitcoin',  // used only when type=custom
+				'qr_mode'       => 'upload',   // upload|auto|none
+				'qr_url'        => '',
+				'copy_button'   => 1,
 			),
-			'cryptos'     => array(
-				array(
-					'enabled'       => 1,
-					'type'          => 'bitcoin',  // bitcoin|ethereum|litecoin|custom
-					'address'       => 'bc1qt7wc6jfth4t2szc2hp6340sqp3y0pa9r3ywgrr',
-					'custom_scheme' => 'bitcoin',  // used only when type=custom
-					'qr_mode'       => 'upload',   // upload|auto|none
-					'qr_url'        => '',
-					'copy_button'   => 1,
-				),
-			),
-			'__import_json' => '',
-		);
-	}
+		),
+		'__import_json' => '',
+	);
+}
+
 
 	/**
-	 * Load options with migration from legacy keys when needed.
+	 * Load options (legacy keys removed).
 	 */
 	private static function load_options() {
-		// 1) Try the new canonical option first.
-		$opt = get_option( self::OPT, null );
-
-		// 2) If missing, try migrating from the newer legacy key.
-		if ( is_null( $opt ) ) {
-			$legacy_newer = get_option( self::LEGACY_OPT1, null ); // 'kc_donate_box_opts'
-			if ( is_array( $legacy_newer ) ) {
-				update_option( self::OPT, $legacy_newer, false );
-				$opt = $legacy_newer;
-			}
-		}
-
-		// 3) If still missing, try migrating from the older legacy key.
-		if ( is_null( $opt ) ) {
-			$legacy_old = get_option( self::LEGACY_OPT2, null ); // 'kc_support_box_opts'
-			if ( is_array( $legacy_old ) ) {
-				update_option( self::OPT, $legacy_old, false );
-				$opt = $legacy_old;
-			}
-		}
-
-		if ( is_null( $opt ) ) {
-			$opt = array();
-		}
-
+		$opt = get_option( self::OPT, array() );
 		return wp_parse_args( $opt, self::defaults() );
 	}
 
@@ -246,7 +211,7 @@ class KCDOBO_Plugin {
 		$label   = isset( $row['label'] ) ? $row['label'] : '';
 		$url     = isset( $row['url'] ) ? $row['url'] : '';
 
-		echo '<div class="kc-link-row">';
+                echo '<div class="kcdobo-link-row">';
 
 		printf(
 			'<label style="display:inline-block;margin-right:8px;"><input type="checkbox" name="%1$s[links][%2$s][enabled]" value="1" %3$s> %4$s</label>',
@@ -271,14 +236,14 @@ class KCDOBO_Plugin {
 			esc_attr( $url )
 		);
 
-		echo '<button type="button" class="button kc-remove-link">' . esc_html__( 'Remove', 'kc-donate-box' ) . '</button>';
+                echo '<button type="button" class="button kcdobo-remove-link">' . esc_html__( 'Remove', 'kc-donate-box' ) . '</button>';
 		echo '</div>';
 	}
 
 	private static function link_row_template() {
 		$tmpl = array( 'enabled' => 1, 'label' => '', 'url' => '' );
 		ob_start();
-		self::link_row_html( '__INDEX__', $tmpl ); // __INDEX__ → replaced in JS
+		self::link_row_html( '__INDEX__', $tmpl ); // __INDEX__ ? replaced in JS
 		$html = ob_get_clean();
 		return str_replace( array( "\n", "\r" ), '', $html );
 	}
@@ -306,13 +271,13 @@ class KCDOBO_Plugin {
 			$links = array();
 		}
 
-		echo '<div id="kc-links-repeater">';
+                        echo '<div id="kcdobo-links-repeater">';
 		foreach ( $links as $i => $row ) {
 			$label   = isset( $row['label'] ) ? $row['label'] : '';
 			$url     = isset( $row['url'] ) ? $row['url'] : '';
 			$checked = ! empty( $row['enabled'] );
 
-			echo '<div class="kc-link-row">';
+                        echo '<div class="kcdobo-link-row">';
 
 			printf(
 				'<label style="display:inline-block;margin-right:8px;"><input type="checkbox" name="%1$s[links][%2$s][enabled]" value="1" %3$s> %4$s</label>',
@@ -337,14 +302,14 @@ class KCDOBO_Plugin {
 				esc_attr( $url )
 			);
 
-			echo '<button type="button" class="button kc-remove-link">' . esc_html__( 'Remove', 'kc-donate-box' ) . '</button>';
+                        echo '<button type="button" class="button kcdobo-remove-link">' . esc_html__( 'Remove', 'kc-donate-box' ) . '</button>';
 			echo '</div>';
 		}
 		echo '</div>';
 
 		// Hidden marker so sanitize() knows this section was present (even if empty).
 		echo '<input type="hidden" name="' . esc_attr( self::OPT ) . '[__links_present]" value="1">';
-		echo '<p><button type="button" class="button button-secondary" id="kc-add-link">+ ' . esc_html__( 'Add link', 'kc-donate-box' ) . '</button></p>';
+                echo '<p><button type="button" class="button button-secondary" id="kcdobo-add-link">+ ' . esc_html__( 'Add link', 'kc-donate-box' ) . '</button></p>';
 	}
 
 	/* -------- Crypto repeater (admin) -------- */
@@ -354,7 +319,7 @@ class KCDOBO_Plugin {
 			$list = array();
 		}
 
-		echo '<div id="kc-crypto-repeater">';
+                echo '<div id="kcdobo-crypto-repeater">';
 		foreach ( $list as $i => $row ) {
 			self::crypto_row_html( $i, $row );
 		}
@@ -362,7 +327,8 @@ class KCDOBO_Plugin {
 
 		// Hidden marker so sanitize() knows this section was present (even if empty).
 		echo '<input type="hidden" name="' . esc_attr( self::OPT ) . '[__cryptos_present]" value="1">';
-		echo '<p><button type="button" class="button button-secondary" id="kc-add-crypto">+ ' . esc_html__( 'Add crypto', 'kc-donate-box' ) . '</button></p>';
+		echo '<p><button type="button" class="button button-secondary" id="kcdobo-add-crypto">+ ' . esc_html__( 'Add crypto', 'kc-donate-box' ) . '</button></p>';
+
 	}
 
 	private static function crypto_row_html( $i, $row ) {
@@ -375,10 +341,10 @@ class KCDOBO_Plugin {
 		$copy_btn = ! empty( $row['copy_button'] );
 
 		$namebase = sprintf( '%s[cryptos][%s]', self::OPT, (string) $i );
-		$media_id = 'kc_media_qr_' . md5( $namebase . '[qr_url]' );
+                            $media_id = 'kcdobo_media_qr_' . md5( $namebase . '[qr_url]' );
 
-		echo '<div class="kc-crypto-row">';
-		echo '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">';
+                            echo '<div class="kcdobo-crypto-row">';		
+                            echo '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">';
 
 		printf(
 			'<label><input type="checkbox" name="%1$s[enabled]" value="1" %2$s> %3$s</label>',
@@ -438,15 +404,15 @@ class KCDOBO_Plugin {
 		}
 		echo '</select></label>';
 
-		printf(
-			'<label> %1$s <input type="text" class="regular-text" id="%2$s" name="%3$s[qr_url]" value="%4$s" placeholder="https://..."> ' .
-			'<button type="button" class="button kc-media-btn" data-target="%2$s">%5$s</button></label>',
-			esc_html__( 'QR image URL', 'kc-donate-box' ),
-			esc_attr( $media_id ),
-			esc_attr( $namebase ),
-			esc_attr( $qr_url ),
-			esc_html__( 'Choose image', 'kc-donate-box' )
-		);
+                        printf(
+                       '<label> %1$s <input type="text" class="regular-text" id="%2$s" name="%3$s[qr_url]" value="%4$s" placeholder="https://..."> ' .
+                       '<button type="button" class="button kcdobo-media-btn" data-target="%2$s">%5$s</button></label>',
+                        esc_html__( 'QR image URL', 'kc-donate-box' ),
+                        esc_attr( $media_id ),
+                        esc_attr( $namebase ),
+                        esc_attr( $qr_url ),
+                        esc_html__( 'Choose image', 'kc-donate-box' )
+                      );
 
 		printf(
 			'<label><input type="checkbox" name="%1$s[copy_button]" value="1" %2$s> %3$s</label>',
@@ -455,7 +421,7 @@ class KCDOBO_Plugin {
 			esc_html__( 'Show copy button', 'kc-donate-box' )
 		);
 
-		echo '<button type="button" class="button kc-remove-crypto" style="margin-left:auto;">' . esc_html__( 'Remove', 'kc-donate-box' ) . '</button>';
+                        echo '<button type="button" class="button kcdobo-remove-crypto" style="margin-left:auto;">' . esc_html__( 'Remove', 'kc-donate-box' ) . '</button>';
 
 		echo '</div>';
 		echo '</div>';
@@ -489,11 +455,11 @@ class KCDOBO_Plugin {
 			'link_row_tmpl'   => self::link_row_template(),
 			'crypto_row_tmpl' => self::crypto_row_template(),
 		);
-		wp_add_inline_script(
-			'kcdobo-admin',
-			'window.kcdonatebox_admin = ' . wp_json_encode( $config ) . ';',
-			'before'
-		);
+                wp_add_inline_script(
+	       'kcdobo-admin',
+	       'window.kcdobo_admin = ' . wp_json_encode( $config ) . ';',
+	       'before'
+                );
 	}
 
 	/* ---------------- Sanitize ---------------- */
@@ -517,10 +483,7 @@ class KCDOBO_Plugin {
 		$out['title']        = isset( $input['title'] )   ? sanitize_text_field( $input['title'] )   : ( isset( $prev['title'] ) ? $prev['title'] : $d['title'] );
 		$out['message']      = isset( $input['message'] ) ? wp_kses_post( $input['message'] )        : ( isset( $prev['message'] ) ? $prev['message'] : $d['message'] );
 
-		/* Links
-		 * If the form posts the links section: parse it (empty array allowed).
-		 * If not posted at all: keep previous (or defaults).
-		 */
+		/* Links */
 		$out['links'] = array();
 		if ( array_key_exists( 'links', $input ) || ! empty( $input['__links_present'] ) ) {
 			if ( ! empty( $input['links'] ) && is_array( $input['links'] ) ) {
@@ -538,15 +501,11 @@ class KCDOBO_Plugin {
 					);
 				}
 			}
-			// If nothing valid remains, keep it as empty [] intentionally.
 		} else {
 			$out['links'] = isset( $prev['links'] ) ? $prev['links'] : $d['links'];
 		}
 
-		/* Cryptos
-		 * If the form posts the cryptos section: parse it (empty array allowed).
-		 * If not posted at all: keep previous (or defaults).
-		 */
+		/* Cryptos */
 		$out['cryptos'] = array();
 		if ( array_key_exists( 'cryptos', $input ) || ! empty( $input['__cryptos_present'] ) ) {
 			if ( ! empty( $input['cryptos'] ) && is_array( $input['cryptos'] ) ) {
@@ -663,7 +622,9 @@ class KCDOBO_Plugin {
 				$label = 'Donate with ' . $coin;
 
 				$html .= '<div class="kc-crypto-item" style="margin-top:8px;">';
-				$html .= '<p><strong>₿/Ξ:</strong> ';
+				$html .= '<p><strong>&#x20BF;/&Xi;:</strong> ';
+
+
 				if ( $uri ) {
 					$html .= '<a href="' . esc_url( $uri ) . '" rel="nofollow noopener">' . esc_html( $label ) . '</a><br>';
 				} else {
@@ -707,47 +668,33 @@ class KCDOBO_Plugin {
 		wp_enqueue_script( 'kcdobo-front', plugins_url( 'assets/js/front.js', __FILE__ ), array(), self::VER, true );
 	}
 
-/* ---------------- Reset ---------------- */
-public static function handle_reset() {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( 'Insufficient permissions' );
-	}
-
-	// Prefer the new nonce first (does not kill the request).
-	// If it's missing/invalid, fall back to the legacy nonce using check_admin_referer(),
-	// which will wp_die() if invalid.
-	$nonce_ok = false;
-
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-	if ( isset( $_REQUEST['_wpnonce'] ) ) {
-		// Unsplash superglobal before using it.
-		// Do NOT over-sanitize the nonce (avoid sanitize_text_field / sanitize_key).
-		$nonce = wp_unslash( $_REQUEST['_wpnonce'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		if ( wp_verify_nonce( $nonce, 'kcdobo_reset' ) ) {
-			$nonce_ok = true;
+	/* ---------------- Reset ---------------- */
+	public static function handle_reset() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( 'Insufficient permissions' );
 		}
+
+		// Only the new nonce remains; legacy fallback removed.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! isset( $_REQUEST['_wpnonce'] ) ) {
+			wp_die( esc_html__( 'Invalid nonce.', 'kc-donate-box' ) );
+		}
+
+                $nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
+		if ( ! wp_verify_nonce( $nonce, 'kcdobo_reset' ) ) {
+			wp_die( esc_html__( 'Invalid nonce.', 'kc-donate-box' ) );
+		}
+
+		update_option( self::OPT, self::defaults(), false );
+
+		wp_redirect(
+			add_query_arg(
+				array( 'page' => self::OPT, 'kc_reset' => 1 ),
+				admin_url( 'options-general.php' )
+			)
+		);
+		exit;
 	}
-
-	if ( ! $nonce_ok ) {
-		// Accept legacy nonce and die on failure (WP core handles reading & validation).
-		check_admin_referer( 'kc_donate_box_reset' );
-	}
-
-	update_option( self::OPT, self::defaults(), false );
-
-	// Optionally remove legacy options too.
-	delete_option( self::LEGACY_OPT1 );
-	delete_option( self::LEGACY_OPT2 );
-
-	wp_redirect(
-		add_query_arg(
-			array( 'page' => self::OPT, 'kc_reset' => 1 ),
-			admin_url( 'options-general.php' )
-		)
-	);
-	exit;
-}
-
 }
 
 KCDOBO_Plugin::init();
